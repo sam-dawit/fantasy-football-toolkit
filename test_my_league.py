@@ -12,9 +12,17 @@ This script will:
 from espn_api.football import League
 import json
 
-# Your league configuration
-LEAGUE_ID = 1830148434
-YEAR = 2024
+# Import authentication from config.py
+try:
+    from config import ESPN_S2, SWID, LEAGUE_ID, YEAR
+except ImportError:
+    print("❌ Error: config.py not found!")
+    print("\nPlease create a config.py file with:")
+    print("ESPN_S2 = 'your_espn_s2_cookie'")
+    print("SWID = 'your_swid_cookie'")
+    print("LEAGUE_ID = 1830148434")
+    print("YEAR = 2024")
+    exit(1)
 
 # Position mapping
 POSITION_MAP = {
@@ -24,13 +32,13 @@ POSITION_MAP = {
 
 def get_my_league_data():
     """
-    Fetch data from your public ESPN league
+    Fetch data from your ESPN league with authentication
     """
     print(f"\n🏈 Connecting to league {LEAGUE_ID}...\n")
     
     try:
-        # Connect to your public league (no auth needed!)
-        league = League(league_id=LEAGUE_ID, year=YEAR)
+        # Connect to your league with authentication
+        league = League(league_id=LEAGUE_ID, year=YEAR, espn_s2=ESPN_S2, swid=SWID)
         
         print(f"✅ Connected to: {league.settings.name}")
         print(f"   Teams: {len(league.teams)}")
@@ -42,11 +50,10 @@ def get_my_league_data():
     except Exception as e:
         print(f"❌ Error connecting to league: {e}")
         print("\nTroubleshooting:")
-        print("  - Make sure the league is PUBLIC")
-        print("  - Check the league ID is correct")
+        print("  - Check your ESPN_S2 and SWID cookies in config.py")
+        print("  - Make sure you're a member of this league")
         print("  - Try accessing the league in your browser first")
         return None
-
 
 def display_all_teams(league):
     """
@@ -63,89 +70,60 @@ def display_all_teams(league):
     
     print("="*70 + "\n")
 
-
 def display_team_roster(team, show_all=False):
     """
     Display a specific team's roster
     """
-    print(f"🏆 {team.team_name.upper()} - ROSTER\n")
-    print(f"Owner: {team.owner}")
-    print(f"Record: {team.wins}-{team.losses} | Points: {team.points_for}")
-    print("\n" + "-"*70 + "\n")
+    print(f"⚡ {team.team_name} ROSTER:\n")
     
-    # Get roster
-    roster = team.roster
-    
-    if not roster:
-        print("❌ No players found on this roster")
-        return []
-    
-    players_for_app = []
-    
-    print(f"{'PLAYER':<25} {'POS':<6} {'TEAM':<6} {'PROJ':<8} {'ACTUAL'}")
-    print("-"*70)
+    roster = team.roster if show_all else [p for p in team.roster if p.lineupSlot != 'BE']
     
     for player in roster:
-        # Get player info
-        name = player.name
-        position = player.position
-        pro_team = player.proTeam if hasattr(player, 'proTeam') else 'FA'
-        
-        # Get projected points for current week
-        proj_points = player.projected_points if hasattr(player, 'projected_points') else 0
-        actual_points = player.points if hasattr(player, 'points') else 0
-        
-        print(f"{name:<25} {position:<6} {pro_team:<6} {proj_points:<8.1f} {actual_points:.1f}")
-        
-        # Format for your Fantasy Football Toolkit
-        player_data = {
-            "name": name,
-            "position": position,
-            "team": pro_team,
-            "projected_points": proj_points,
-            "last_3_avg": actual_points,  # Using current week as placeholder
-            "opponent_def_rank": 16  # Default middle value
-        }
-        players_for_app.append(player_data)
+        pos = POSITION_MAP.get(player.position, player.position)
+        print(f"  {pos:8} {player.name:25} ({player.proTeam})")
     
     print("\n" + "="*70 + "\n")
-    
-    return players_for_app
 
-
-def export_for_app(players, filename="my_players.json"):
+def export_for_app(league):
     """
-    Export player data in format ready for your app
+    Format data for the Fantasy Football Toolkit web app
     """
-    with open(filename, 'w') as f:
-        json.dump(players, f, indent=2)
+    print("📦 EXPORTING DATA FOR WEB APP...\n")
     
-    print(f"\n💾 Exported {len(players)} players to {filename}")
-    print("   You can now use this data in your Fantasy Football Toolkit!\n")
-
+    my_team = league.teams[0]  # Assuming first team is yours, adjust if needed
+    
+    players_data = []
+    for player in my_team.roster:
+        if player.lineupSlot != 'BE':  # Only active players
+            players_data.append({
+                'name': player.name,
+                'position': POSITION_MAP.get(player.position, player.position),
+                'team': player.proTeam,
+                'projected': getattr(player, 'projected_points', 0),
+                'actual': getattr(player, 'points', 0)
+            })
+    
+    # Save to JSON file
+    with open('my_players.json', 'w') as f:
+        json.dump(players_data, f, indent=2)
+    
+    print(f"✅ Saved {len(players_data)} players to my_players.json")
+    print("\nYou can now use this file with the Fantasy Football Toolkit!")
+    print("="*70 + "\n")
 
 if __name__ == "__main__":
-    # Connect to your league
+    # Connect to league
     league = get_my_league_data()
     
     if league:
-        # Show all teams
+        # Display all teams
         display_all_teams(league)
         
-        # Get YOUR team (first team for now - you can change this)
-        your_team = league.teams[0]  # Change index if needed
+        # Display your team's roster (first team by default)
+        if league.teams:
+            display_team_roster(league.teams[0], show_all=True)
         
-        print(f"\n🎯 Showing roster for: {your_team.team_name}")
-        print(f"   (If this isn't your team, check the team list above)\n")
-        
-        # Display your roster
-        players = display_team_roster(your_team)
-        
-        # Export for your app
-        if players:
-            export_for_app(players)
-            
-            print("\n✅ SUCCESS! Next steps:")
-            print("   1. Check my_players.json for your exported roster")
-            print("   2. You can now integrate this into app.py")
-            print("   3. Run 'python app.py' to use your Fantasy Toolkit\n")
+        # Export data for the web app
+        export_for_app(league)
+    
+    print("✨ Done!\n")
