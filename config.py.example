@@ -1,0 +1,22 @@
+"""Configuration file for ESPN Fantasy Football API
+
+Copy this file to config.py and fill in your credentials.
+NEVER commit config.py to version control!
+"""
+
+# ESPN Authentication (Required for private leagues)
+# Get these cookies from your browser after logging into ESPN Fantasy
+ESPN_S2 = 'your_espn_s2_cookie_here'
+SWID = 'your_swid_cookie_here'
+
+# League Configuration
+LEAGUE_ID = 1830148434  # Your ESPN league ID
+YEAR = 2024  # Current fantasy season year
+
+# How to find your ESPN cookies:
+# 1. Log into ESPN Fantasy Football in your browser
+# 2. Open Developer Tools (F12 or right-click → Inspect)
+# 3. Go to Application tab (Chrome) or Storage tab (Firefox)
+# 4. Click on Cookies → fantasy.espn.com
+# 5. Find 'espn_s2' and 'SWID' cookies
+# 6. Copy their values here (keep the quotes!)
