@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fantasy Football Toolkit</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        
+        .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 20px;
+        }
+        
+        .player-selection {
+            margin-bottom: 30px;
+        }
+        
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .player-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .player-checkbox {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .player-checkbox:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+        }
+        
+        .player-checkbox input {
+            margin-right: 10px;
+        }
+        
+        .player-info {
+            flex: 1;
+        }
+        
+        .player-name {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .player-pos {
+            font-size: 0.85em;
+            color: #666;
+        }
+        
+        .analyze-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+        
+        .analyze-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .results {
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        .results-table th,
+        .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .results-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .recommendation {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+        
+        .recommendation.start {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .recommendation.bench {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏈 Fantasy Football Toolkit</h1>
+        <p class="subtitle">Select your players to get start/sit recommendations</p>
+        
+        <div class="card player-selection">
+            <h2>Select Players</h2>
+            <div class="player-grid" id="playerGrid"></div>
+            <button class="analyze-btn" onclick="analyzeTeam()">Analyze My Team</button>
+        </div>
+        
+        <div class="card results" id="results">
+            <h2>Recommendations</h2>
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th>Position</th>
+                        <th>Team</th>
+                        <th>Score</th>
+                        <th>Recommendation</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody"></tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        let allPlayers = [];
+        
+        // Fetch all players on load
+        async function loadPlayers() {
+            try {
+                const response = await fetch('/api/players');
+                allPlayers = await response.json();
+                renderPlayerGrid();
+            } catch (error) {
+                console.error('Error loading players:', error);
+            }
+        }
+        
+        function renderPlayerGrid() {
+            const grid = document.getElementById('playerGrid');
+            grid.innerHTML = allPlayers.map((player, index) => `
+                <label class="player-checkbox">
+                    <input type="checkbox" name="player" value="${player.name}" id="player${index}">
+                    <div class="player-info">
+                        <div class="player-name">${player.name}</div>
+                        <div class="player-pos">${player.position} - ${player.team}</div>
+                    </div>
+                </label>
+            `).join('');
+        }
+        
+        async function analyzeTeam() {
+            const checkedBoxes = document.querySelectorAll('input[name="player"]:checked');
+            const selectedPlayers = Array.from(checkedBoxes).map(cb => cb.value);
+            
+            if (selectedPlayers.length === 0) {
+                alert('Please select at least one player!');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ players: selectedPlayers })
+                });
+                
+                const data = await response.json();
+                displayResults(data.analyzed_players);
+            } catch (error) {
+                console.error('Error analyzing team:', error);
+                alert('Error analyzing team. Please try again.');
+            }
+        }
+        
+        function displayResults(players) {
+            const resultsBody = document.getElementById('resultsBody');
+            const resultsDiv = document.getElementById('results');
+            
+            resultsBody.innerHTML = players.map(player => `
+                <tr>
+                    <td>${player.name}</td>
+                    <td>${player.position}</td>
+                    <td>${player.team}</td>
+                    <td>${player.score}</td>
+                    <td>
+                        <span class="recommendation ${player.recommendation.toLowerCase()}">
+                            ${player.recommendation}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+            
+            resultsDiv.classList.add('show');
+            resultsDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Load players when page loads
+        loadPlayers();
+    </script>
+</body>
+</html>
