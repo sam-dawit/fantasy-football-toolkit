@@ -32,12 +32,24 @@ MVP fantasy football analytics tool with player scoring and start/sit recommenda
    pip install flask
    ```
 
-3. **Run the application**
+   3. **Configure ESPN Authentication** (Required for private leagues)
+```bash
+cp config.py.example config.py
+```
+
+Then edit `config.py` and add your ESPN credentials:
+- Log into ESPN Fantasy Football in your browser
+- Open Developer Tools (F12 or right-click → Inspect)
+- Go to Application tab (Chrome) or Storage tab (Firefox)
+- Click on Cookies → fantasy.espn.com
+- Find 'espn_s2' and 'SWID' cookies and copy their values to config.py
+
+4. **Run the application**
    ```bash
    python app.py
    ```
 
-4. **Open in browser**
+5. **Open in browser**
    ```
    Navigate to: http://localhost:5000
    ```
