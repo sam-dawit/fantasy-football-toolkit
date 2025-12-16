@@ -15,6 +15,7 @@ config.py
 
 # Data Files
 my_players.json
+all_nfl_players.json
 *.json
 
 # IDE / Editor
