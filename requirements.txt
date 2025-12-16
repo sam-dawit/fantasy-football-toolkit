@@ -1,0 +1,10 @@
+# Fantasy Football Toolkit - Python Dependencies
+
+# Core web framework
+Flask==3.0.0
+
+# ESPN Fantasy API integration
+espn-api==0.35.0
+
+# HTTP requests (for any additional APIs)
+requests==2.31.0
